@@ -12,7 +12,8 @@
 	],
 	"keywords": [
 		"kubernetes",
-		"microk8s"
+        "microk8s",
+        "kubernetes-extension-cloud-provider"
 	],
 	"activationEvents": [
 		"onView:kubernetes.cloudExplorer"
