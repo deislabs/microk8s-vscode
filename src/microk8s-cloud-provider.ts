@@ -65,8 +65,45 @@ async function getMicrok8sKubeconfigYaml(): Promise<string | undefined> {
     }
 
     const originalKubeconfig = yaml.result;
-    // TODO: distinct user name
-    return originalKubeconfig;
+    const distinctKubeconfig = renameDistinctUser(originalKubeconfig);
+    return distinctKubeconfig;
+}
+
+function renameDistinctUser(kubeconfig: string): string {
+    // kubeconfig is YAML of the following form.  The 'admin' user name
+    // risks clashing with other admin users or other Microk8s instances.
+    // So we rename the user to something with a lower risk of clashing
+    //
+    // apiVersion: v1
+    // clusters:
+    // - ...
+    // contexts:
+    // - context:
+    //     cluster: microk8s-cluster
+    //     user: admin  # mentions non-distinct name
+    //   name: microk8s
+    // current-context: microk8s
+    // kind: Config
+    // preferences: {}
+    // users:
+    // - name: admin  # mentions non-distinct name
+    //   user:
+    //     password: ...
+    //     username: ...
+
+    const distinctName = 'microk8s-admin-' + randomDigitSequence(3);
+    return kubeconfig.replace('user: admin', `user: ${distinctName}`)
+                     .replace('name: admin', `name: ${distinctName}`);
+}
+
+function randomDigitSequence(length: number): string {
+    if (length <= 0 || length >= 7) {
+        throw new Error("randomDigitSequence length out of range");
+    }
+    const r = Math.random();  // between 0 and 1
+    const rstr = r.toString();
+    const digits = rstr.substr(2, length);
+    return digits;
 }
 
 export const MICROK8S_CLOUD_PROVIDER = new Microk8sCloudProvider();
