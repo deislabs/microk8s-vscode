@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 
+import * as microk8s from './microk8s/microk8s';
+import { failed } from './utils/errorable';
+import { shell } from './utils/shell';
+
 class Microk8sCloudProvider implements k8s.CloudExplorerV1.CloudProvider {
     readonly cloudName = "Microk8s";
     readonly treeDataProvider = new Microk8sTreeDataProvider();
@@ -50,7 +54,19 @@ class Microk8sTreeDataProvider implements vscode.TreeDataProvider<Microk8sCloudP
 }
 
 async function getMicrok8sKubeconfigYaml(): Promise<string | undefined> {
-    return undefined;
+    const yaml = await microk8s.getKubeconfig(shell);
+    if (failed(yaml)) {
+        if (yaml.error[0].includes('Insufficient permissions')) {
+            vscode.window.showErrorMessage("Can't get kubeconfig for Microk8s. You need to add yourself to the 'microk8s' group using the command 'sudo usermod -a -G microk8s <your-name>' then log out and log in again.");
+        } else {
+            vscode.window.showErrorMessage(`Can't get kubeconfig for Microk8s: ${yaml.error[0]}`);
+        }
+        return undefined;
+    }
+
+    const originalKubeconfig = yaml.result;
+    // TODO: distinct user name
+    return originalKubeconfig;
 }
 
 export const MICROK8S_CLOUD_PROVIDER = new Microk8sCloudProvider();

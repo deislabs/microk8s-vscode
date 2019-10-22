@@ -11,7 +11,7 @@ export interface ExecOpts {
 
 export interface Shell {
     exec(cmd: string, stdin?: string): Promise<Errorable<ShellResult>>;
-    execObj<T>(cmd: string, cmdDesc: string, opts: ExecOpts, fn: (stdout: string) => T): Promise<Errorable<T>>;
+    execObj<T>(cmd: string, cmdDesc: string, opts: ExecOpts, fn: (stdout: string) => T, errfn?: (sr: ShellResult) => Errorable<T>): Promise<Errorable<T>>;
 }
 
 export const shell: Shell = {
@@ -45,7 +45,7 @@ async function exec(cmd: string, stdin?: string): Promise<Errorable<ShellResult>
     }
 }
 
-async function execObj<T>(cmd: string, cmdDesc: string, opts: ExecOpts, fn: ((stdout: string) => T)): Promise<Errorable<T>> {
+async function execObj<T>(cmd: string, cmdDesc: string, opts: ExecOpts, fn: ((stdout: string) => T), errfn?: (sr: ShellResult) => Errorable<T>): Promise<Errorable<T>> {
     const o = Object.assign({}, execOpts(), opts);
     try {
         const sr = await execCore(cmd, o);
@@ -53,6 +53,9 @@ async function execObj<T>(cmd: string, cmdDesc: string, opts: ExecOpts, fn: ((st
             const value = fn(sr.stdout);
             return { succeeded: true, result: value };
         } else {
+            if (errfn) {
+                return errfn(sr);
+            }
             return { succeeded: false, error: [`${cmdDesc} error: ${sr.stderr}`] };
         }
     } catch (ex) {
