@@ -1,7 +1,7 @@
 {
     "name": "microk8s-vscode",
-    "displayName": "Microk8s",
-    "description": "Work with the Microk8s local Kubernetes provider in Visual Studio Code",
+    "displayName": "MicroK8s",
+    "description": "Work with the MicroK8s local Kubernetes provider in Visual Studio Code",
     "publisher": "ms-kubernetes-tools",
     "version": "0.0.1",
     "engines": {
