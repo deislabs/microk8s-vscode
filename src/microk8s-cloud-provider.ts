@@ -2,16 +2,14 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 
 import * as microk8s from './microk8s/microk8s';
-import { failed } from './utils/errorable';
-import { shell } from './utils/shell';
 
 class Microk8sCloudProvider implements k8s.CloudExplorerV1.CloudProvider {
-    readonly cloudName = "Microk8s";
+    readonly cloudName = "MicroK8s";
     readonly treeDataProvider = new Microk8sTreeDataProvider();
     async getKubeconfigYaml(cluster: any): Promise<string | undefined> {
         const treeNode = cluster as Microk8sCloudProviderTreeNode;
         if (treeNode.nodeType === 'cluster') {
-            return await getMicrok8sKubeconfigYaml();
+            return getMicroK8sKubeconfigYaml();
         }
         return undefined;
     }
@@ -39,7 +37,7 @@ class Microk8sTreeDataProvider implements vscode.TreeDataProvider<Microk8sCloudP
             treeItem.tooltip = element.diagnostic;
             return treeItem;
         } else {
-            const treeItem = new vscode.TreeItem("Microk8s Instance", vscode.TreeItemCollapsibleState.None);
+            const treeItem = new vscode.TreeItem("Kubeconfig", vscode.TreeItemCollapsibleState.None);
             treeItem.contextValue = `microk8s.cluster ${k8s.CloudExplorerV1.SHOW_KUBECONFIG_COMMANDS_CONTEXT}`;
             return treeItem;
         }
@@ -53,20 +51,15 @@ class Microk8sTreeDataProvider implements vscode.TreeDataProvider<Microk8sCloudP
     }
 }
 
-async function getMicrok8sKubeconfigYaml(): Promise<string | undefined> {
-    const yaml = await microk8s.getKubeconfig(shell);
-    if (failed(yaml)) {
-        if (yaml.error[0].includes('Insufficient permissions')) {
-            vscode.window.showErrorMessage("Can't get kubeconfig for Microk8s. You need to add yourself to the 'microk8s' group using the command 'sudo usermod -a -G microk8s <your-name>' then log out and log in again.");
-        } else {
-            vscode.window.showErrorMessage(`Can't get kubeconfig for Microk8s: ${yaml.error[0]}`);
-        }
+function getMicroK8sKubeconfigYaml(): string | undefined {
+    try {
+        const originalKubeconfig = microk8s.getKubeconfigYaml();
+        const distinctKubeconfig = renameDistinctUser(originalKubeconfig);
+        return distinctKubeconfig;
+    }  catch (ex) {
+        vscode.window.showErrorMessage("Can't get kubeconfig for Microk8s. "+ ex.message);
         return undefined;
     }
-
-    const originalKubeconfig = yaml.result;
-    const distinctKubeconfig = renameDistinctUser(originalKubeconfig);
-    return distinctKubeconfig;
 }
 
 function renameDistinctUser(kubeconfig: string): string {
